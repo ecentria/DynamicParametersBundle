@@ -93,6 +93,53 @@ class ParameterReplacementPass implements CompilerPassInterface
 
                 continue;
             }
+
+            // Argument with parameters
+            if (preg_match_all('/%%|%([^%\s]+)%/', $value, $match)) {
+                $parameters = array_filter($match[1]);
+
+                // Do not replace argument if there are no dynamic parameters inside
+                if (!array_intersect($parameters, array_keys($this->parameterExpressions))) {
+                    continue;
+                }
+
+                // Next two preg_replace_callback calls are transforming argument string like "%foo%-text-%bar%"
+                // into expression like "dynamic_parameter('foo', 'SYMFONY_FOO')~'-text-'~static_parameter('bar')"
+                // see use cases in ParameterReplacementPassTest::examplesOfConcatenatedDynamicParameters
+                $tmpValue = preg_replace_callback(
+                    '/(?P<text>.*?)(?:(?P<parameter>%(?:' . join('|', array_map('preg_quote', $parameters)) . ')%)|$)/',
+                    function ($match) {
+                        if (!$match['text']) {
+                            return $match[0];
+                        }
+
+                        return str_replace($match['text'], '\'' . $match['text'] . '\'~', $match[0]);
+                    },
+                    $value
+                );
+                $tmpValue = preg_replace_callback(
+                    '/%%|%([^%\s]+)%/',
+                    function ($match) {
+                        // skip %%
+                        if (!isset($match[1])) {
+                            return $match[0];
+                        }
+
+                        $parameter = $match[1];
+
+                        $expression = isset($this->parameterExpressions[$parameter]) ?
+                            $this->parameterExpressions[$parameter] :
+                            sprintf('static_parameter(%s)', var_export($parameter, true));
+
+                        return str_replace('%' . $parameter . '%', $expression . '~', $match[0]);
+                    },
+                    $tmpValue
+                );
+                $tmpValue = substr($tmpValue, 0, -1);// remove trailing ~
+                $tmpValue = str_replace('%%', '%', $tmpValue);// un-escape % in expression string
+                $values[$key] = new Expression($tmpValue);
+                continue;
+            }
         }
 
         return $values;

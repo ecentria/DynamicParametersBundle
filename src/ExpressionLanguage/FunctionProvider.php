@@ -33,6 +33,11 @@ class FunctionProvider implements ExpressionFunctionProviderInterface
 
                 return $variables['container']->getParameter($paramName);
             }),
+            new ExpressionFunction('static_parameter', function ($paramName) {
+                return sprintf('($this->getParameter(%s))', $paramName);
+            }, function (array $variables, $paramName) {
+                return $variables['container']->getParameter($paramName);
+            }),
         );
     }
 
