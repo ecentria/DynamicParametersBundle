@@ -117,9 +117,11 @@ class ParameterReplacementPass implements CompilerPassInterface
                     },
                     $value
                 );
+
+                $parameterExpressions = $this->parameterExpressions;
                 $tmpValue = preg_replace_callback(
                     '/%%|%([^%\s]+)%/',
-                    function ($match) {
+                    function ($match) use ($parameterExpressions) {
                         // skip %%
                         if (!isset($match[1])) {
                             return $match[0];
@@ -127,8 +129,8 @@ class ParameterReplacementPass implements CompilerPassInterface
 
                         $parameter = $match[1];
 
-                        $expression = isset($this->parameterExpressions[$parameter]) ?
-                            $this->parameterExpressions[$parameter] :
+                        $expression = isset($parameterExpressions[$parameter]) ?
+                            $parameterExpressions[$parameter] :
                             sprintf('static_parameter(%s)', var_export($parameter, true));
 
                         return str_replace('%' . $parameter . '%', $expression . '~', $match[0]);
