@@ -6,6 +6,7 @@ use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Parameter;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\ExpressionLanguage\Expression;
 
 class ParameterReplacementPass implements CompilerPassInterface
@@ -30,7 +31,7 @@ class ParameterReplacementPass implements CompilerPassInterface
         $this->visitedDefinitions = new \SplObjectStorage();
 
         foreach ($container->getDefinitions() as $definition) {
-            $this->updateDefinitionArguments($definition);
+            $this->updateDefinitionArguments($definition, $container->getParameterBag());
         }
 
         // Release memory
@@ -38,7 +39,7 @@ class ParameterReplacementPass implements CompilerPassInterface
         $this->parameterExpressions = array();
     }
 
-    private function updateDefinitionArguments(Definition $definition)
+    private function updateDefinitionArguments(Definition $definition, ParameterBagInterface $parameterBag)
     {
         if ($this->visitedDefinitions->contains($definition)) {
             return;
@@ -46,23 +47,23 @@ class ParameterReplacementPass implements CompilerPassInterface
 
         $this->visitedDefinitions->attach($definition);
 
-        $definition->setProperties($this->updateArguments($definition->getProperties()));
-        $definition->setArguments($this->updateArguments($definition->getArguments()));
+        $definition->setProperties($this->updateArguments($definition->getProperties(), $parameterBag));
+        $definition->setArguments($this->updateArguments($definition->getArguments(), $parameterBag));
 
         $methodsCalls = array();
 
         foreach ($definition->getMethodCalls() as $index => $call) {
-            $methodsCalls[$index] = array($call[0], $this->updateArguments($call[1]));
+            $methodsCalls[$index] = array($call[0], $this->updateArguments($call[1], $parameterBag));
         }
 
         $definition->setMethodCalls($methodsCalls);
     }
 
-    private function updateArguments(array $values)
+    private function updateArguments(array $values, ParameterBagInterface $parameterBag)
     {
         foreach ($values as $key => $value) {
             if ($value instanceof Definition) {
-                $this->updateDefinitionArguments($value);
+                $this->updateDefinitionArguments($value, $parameterBag);
 
                 continue;
             }
@@ -74,7 +75,7 @@ class ParameterReplacementPass implements CompilerPassInterface
             }
 
             if (is_array($value)) {
-                $values[$key] = $this->updateArguments($value);
+                $values[$key] = $this->updateArguments($value, $parameterBag);
 
                 continue;
             }
@@ -83,16 +84,7 @@ class ParameterReplacementPass implements CompilerPassInterface
                 continue;
             }
 
-            // Parameter-only argument
-            if (preg_match('/^%([^%\s]++)%$/', $value, $match)) {
-                $parameter = strtolower($match[1]);
-
-                if (isset($this->parameterExpressions[$parameter])) {
-                    $values[$key] = new Expression($this->parameterExpressions[$parameter]);
-                }
-
-                continue;
-            }
+            $value = $this->flattenParameterValueToClosestDynamicParameters($value, $parameterBag);
 
             // Argument with parameters
             if (preg_match_all('/%%|%([^%\s]+)%/', $value, $match)) {
@@ -145,5 +137,39 @@ class ParameterReplacementPass implements CompilerPassInterface
         }
 
         return $values;
+    }
+
+    /**
+     * @param string $value
+     * @return string mixed
+     */
+    public function flattenParameterValueToClosestDynamicParameters($value, ParameterBagInterface $parameterBag)
+    {
+        $parameterExpressions = $this->parameterExpressions;
+        $that = $this;
+        $value = preg_replace_callback(
+            '/%%|%([^%\s]+)%/',
+            function ($match) use ($parameterExpressions, $that, $parameterBag) {
+                // skip %%
+                if (!isset($match[1])) {
+                    return $match[0];
+                }
+
+                $parameter = $match[1];
+
+                if (!isset($parameterExpressions[$parameter])) {
+                    // static parameter - let's drill down and see if there is nested dynamic parameter
+                    $value = $parameterBag->get($parameter);
+                    if (is_string($value) && preg_match('/%%|%([^%\s]+)%/', $value)) {
+                        return $that->flattenParameterValueToClosestDynamicParameters($value, $parameterBag);
+                    }
+                }
+
+                return $match[0];
+            },
+            $value
+        );
+
+        return $value;
     }
 }
