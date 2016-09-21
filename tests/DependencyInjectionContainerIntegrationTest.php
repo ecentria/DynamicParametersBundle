@@ -17,6 +17,83 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 class DependencyInjectionContainerIntegrationTest extends \PHPUnit_Framework_TestCase
 {
     /**
+     * @param string $valueDefinition e.g. "%foo% - %bar%"
+     * @param string $expectedResolvedValue e.g. "foo-value - bar-value"
+     * @dataProvider examplesOfConcatenatedDynamicParameters
+     */
+    public function testReplaceConcatenatedParameters($valueDefinition, $expectedResolvedValue)
+    {
+        $dynamicParametersBundle = new IncenteevDynamicParametersBundle();
+
+        $container = new ContainerBuilder();
+        $container->setParameter('foo', '[foo-static]');// braces make concatenated parameters more readable, see assertions
+        $container->setParameter('bar', '[bar-static]');
+        $container->setParameter('incenteev_dynamic_parameters.parameters', array('foo' => array('variable' => 'SYMFONY_FOO', 'yaml' => false)));
+
+        $container->registerExtension($dynamicParametersBundle->getContainerExtension());
+        $dynamicParametersBundle->build($container);
+
+        $container->register('srv.foo', 'stdClass')
+            ->setProperty('test', $valueDefinition);
+
+        $container->compile();
+
+        // note that env var is set after container compilation
+        putenv('SYMFONY_FOO=[foo-dynamic]');
+
+        $service = $container->get('srv.foo');
+
+        $this->assertEquals($expectedResolvedValue, $service->test);
+    }
+
+    public function examplesOfConcatenatedDynamicParameters()
+    {
+        return array(
+            'dynamic parameter concatenated with static parameter' => array(
+                '%foo%%bar%', '[foo-dynamic][bar-static]'
+            ),
+            'dynamic parameter concatenated with text' => array(
+                '%foo%_some-text', '[foo-dynamic]_some-text'
+            ),
+            'text concatenated with dynamic parameter' => array(
+                'some-text_%foo%', 'some-text_[foo-dynamic]'
+            ),
+            'text concatenated with multiple parameters and texts and there is text at the end' => array(
+                'some-text_%foo%_other-text_%bar%_text-at-the-end', 'some-text_[foo-dynamic]_other-text_[bar-static]_text-at-the-end'
+            ),
+            'text concatenated with multiple parameters and texts and there is parameter at the end' => array(
+                'some-text_%foo%_other-text_%bar%', 'some-text_[foo-dynamic]_other-text_[bar-static]'
+            ),
+            'text with escaped percent concatenated with dynamic parameter' => array(
+                'Save %foo%%%!%bar%', 'Save [foo-dynamic]%![bar-static]'
+            ),
+        );
+    }
+
+    public function testNotReplaceConcatenatedNonDynamicParameters()
+    {
+        $dynamicParametersBundle = new IncenteevDynamicParametersBundle();
+
+        $container = new ContainerBuilder();
+        $container->setParameter('foo', 'foo-static-value');
+        $container->setParameter('bar', 'bar-static-value');
+        $container->setParameter('incenteev_dynamic_parameters.parameters', array('baz' => array('variable' => 'SYMFONY_BAZ', 'yaml' => false)));
+
+        $container->registerExtension($dynamicParametersBundle->getContainerExtension());
+        $dynamicParametersBundle->build($container);
+
+        $container->register('srv.foo', 'stdClass')
+            ->setProperty('test', '%foo%%bar%');
+
+        $container->compile();
+
+        $def = $container->getDefinition('srv.foo');
+        $props = $def->getProperties();
+
+        $this->assertNotInstanceOf('Symfony\Component\ExpressionLanguage\Expression', $props['test']);
+    }
+
+    /**
      * @param array $dynamicParameters
      * @param string $expectedUrl
      * @return void
