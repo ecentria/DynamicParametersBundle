@@ -25,7 +25,11 @@ class ParameterReplacementPass implements CompilerPassInterface
 
         foreach ($container->getParameter('incenteev_dynamic_parameters.parameters') as $name => $paramConfig) {
             $function = $paramConfig['yaml'] ? 'dynamic_yaml_parameter' : 'dynamic_parameter';
-            $this->parameterExpressions[$name] = sprintf('%s(%s, %s)', $function, var_export($name, true), var_export($paramConfig['variable'], true));
+            $parameterName = var_export($name, true);
+            if (strpos($name, 'env(') === 0) {
+                $parameterName = var_export('default_' . $name, true);
+            }
+            $this->parameterExpressions[$name] = sprintf('%s(%s, %s)', $function, $parameterName, var_export($paramConfig['variable'], true));
         }
 
         $this->visitedDefinitions = new \SplObjectStorage();
@@ -59,6 +63,18 @@ class ParameterReplacementPass implements CompilerPassInterface
         $definition->setMethodCalls($methodsCalls);
     }
 
+    /**
+     * Replace dynamic parameters with expressions
+     *
+     * Implementation definitely is not the most efficient one in terms of CPU usage, but tests are good enough
+     * to enable refactoring without braking functionality.
+     *
+     * See DependencyInjectionContainerIntegrationTest
+     *
+     * @param array $values
+     * @param ParameterBagInterface $parameterBag
+     * @return array
+     */
     private function updateArguments(array $values, ParameterBagInterface $parameterBag)
     {
         foreach ($values as $key => $value) {
@@ -84,7 +100,17 @@ class ParameterReplacementPass implements CompilerPassInterface
                 continue;
             }
 
+            $tmpValue = $this->resolveArrayOrNull($value, $parameterBag);
+            if ($this->isArrayWithDynamicParametersInside($tmpValue, $parameterBag)) {
+                $values[$key] = $this->updateArguments($tmpValue, $parameterBag);
+                continue;
+            }
+
             $value = $this->flattenParameterValueToClosestDynamicParameters($value, $parameterBag);
+
+            foreach ($this->parameterExpressions as $parameterName => $expression) {
+                $value = str_replace('${' . $parameterName . '}', '%' . $parameterName . '%', $value);
+            }
 
             // Argument with parameters
             if (preg_match_all('/%%|%([^%\s]+)%/', $value, $match)) {
@@ -160,7 +186,7 @@ class ParameterReplacementPass implements CompilerPassInterface
                 if (!isset($parameterExpressions[$parameter])) {
                     // static parameter - let's drill down and see if there is nested dynamic parameter
                     $value = $parameterBag->get($parameter);
-                    if (is_string($value) && preg_match('/%%|%([^%\s]+)%/', $value)) {
+                    if (is_string($value) && (preg_match('/%%|%([^%\s]+)%/', $value) || $that->hasDynamicPlaceholders($value))) {
                         return $that->flattenParameterValueToClosestDynamicParameters($value, $parameterBag);
                     }
                 }
@@ -171,5 +197,60 @@ class ParameterReplacementPass implements CompilerPassInterface
         );
 
         return $value;
+    }
+
+    private function resolveArrayOrNull($value, ParameterBagInterface $parameterBag)
+    {
+        if (is_string($value) && preg_match('/^%([^%\s]+)%$/', $value, $match)) {
+            $tmpValue = $parameterBag->get($match[1]);
+
+            if (is_array($tmpValue)) {
+                return $tmpValue;
+            }
+
+            return $this->resolveArrayOrNull($tmpValue, $parameterBag);
+        }
+
+        return null;
+    }
+
+    public function isArrayWithDynamicParametersInside($value, ParameterBagInterface $parameterBag)
+    {
+        if (!is_array($value)) {
+            return false;
+        }
+
+        foreach ($value as $k => $v) {
+
+            $v =  $this->resolveArrayOrNull($v, $parameterBag) ?: $v;
+
+            if ($this->isArrayWithDynamicParametersInside($v, $parameterBag)) {
+                return true;
+            }
+
+            if (is_array($v)) {
+                continue;
+            }
+
+            if ($this->hasDynamicPlaceholders($this->flattenParameterValueToClosestDynamicParameters($v, $parameterBag))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function hasDynamicPlaceholders($value)
+    {
+        foreach ($this->parameterExpressions as $parameterName => $expression) {
+            if (strpos(strtolower($value), '${' . $parameterName . '}') !== false) {
+                return true;
+            }
+
+            if (strpos(strtolower($value), '%' . $parameterName . '%') !== false) {
+                return true;
+            }
+        }
+        return false;
     }
 }
