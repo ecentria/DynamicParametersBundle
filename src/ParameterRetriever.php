@@ -9,11 +9,13 @@ class ParameterRetriever
 {
     private $container;
     private $parameterMap;
+    private $allParameters;
 
-    public function __construct(ContainerInterface $container, array $parameterMap)
+    public function __construct(ContainerInterface $container, array $parameterMap, $allParameters = array())
     {
         $this->container = $container;
         $this->parameterMap = $parameterMap;
+        $this->allParameters = $allParameters;
     }
 
     /**
@@ -23,6 +25,11 @@ class ParameterRetriever
      */
     public function getParameter($name)
     {
+        $nameLowerCased = strtolower($name);// see \Symfony\Component\DependencyInjection\ParameterBag\ParameterBag::set
+        if (array_key_exists($nameLowerCased, $this->allParameters)) {
+            return $this->allParameters[$nameLowerCased];
+        }
+
         if (!isset($this->parameterMap[$name])) {
             return $this->container->getParameter($name);
         }

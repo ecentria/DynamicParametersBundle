@@ -464,6 +464,109 @@ class DependencyInjectionContainerIntegrationTest extends \PHPUnit_Framework_Tes
     }
 
     /**
+     * @param string $valueDefinition e.g. "%foo% - %bar%"
+     * @param string $expectedResolvedValue e.g. "foo-value - bar-value"
+     * @dataProvider examplesOfConcatenatedDynamicParameters
+     */
+    public function testConcatenatedParametersFromRetriever($valueDefinition, $expectedResolvedValue)
+    {
+        $dynamicParametersBundle = new IncenteevDynamicParametersBundle();
+
+        $container = new ContainerBuilder();
+        $container->setParameter('foo', '%env(SYMFONY_FOO)%');
+        $container->setParameter('bar', '[bar-static]');// braces make concatenated parameters more readable, see assertions
+        $container->setParameter('concatenated_parameter', $valueDefinition);
+
+        $container->registerExtension($dynamicParametersBundle->getContainerExtension());
+        $dynamicParametersBundle->build($container);
+
+        $container->compile();
+
+        // note that env var is set after container compilation
+        $this->setEnvVar('SYMFONY_FOO', '[foo-dynamic]');
+
+        $retriever = $container->get('incenteev_dynamic_parameters.retriever');
+
+        $this->assertEquals($expectedResolvedValue, $retriever->getParameter('concatenated_parameter'));
+        $this->assertEquals('[foo-dynamic]', $retriever->getParameter('foo'));
+        $this->assertEquals('[bar-static]', $retriever->getParameter('bar'));
+        $this->assertEquals('[foo-dynamic]', $retriever->getParameter('env(SYMFONY_FOO)'));
+    }
+
+    /**
+     * @param array $dynamicParameters
+     * @param string $expectedUrl
+     * @return void
+     * @dataProvider examplesOfNestedDynamicParameters
+     */
+    public function testNestedDynamicParametersFromRetriever($dynamicParameters, $expectedUrl)
+    {
+        $dynamicParametersBundle = new IncenteevDynamicParametersBundle();
+
+        $container = new ContainerBuilder();
+        $container->setParameter('fancy_url', '%base_url%/some-fancy-url.html');
+        $container->setParameter('base_url', '%scheme%://%host%');
+        $container->setParameter('scheme', 'http');
+        $container->setParameter('host', '%subdomain%.example.org');
+        $container->setParameter('subdomain', 'test');
+
+        $container->registerExtension($dynamicParametersBundle->getContainerExtension());
+        $dynamicParametersBundle->build($container);
+
+        foreach ($dynamicParameters as $name => $value) {
+            $envVariableName = 'SYMFONY_' . strtoupper($name);
+            $container->setParameter($name, '%env(' . $envVariableName . ')%');
+        }
+
+        $container->setParameter('url', '%fancy_url%');
+        $container->setParameter('url_concatenated_with_text', 'Visit %fancy_url%!');
+
+        $container->compile();
+
+        // note that env vars are set after container compilation
+        foreach ($dynamicParameters as $name => $value) {
+            $envVariableName = 'SYMFONY_' . strtoupper($name);
+            $this->setEnvVar($envVariableName, $value);
+        }
+
+        $retriever = $container->get('incenteev_dynamic_parameters.retriever');
+
+        $this->assertEquals($expectedUrl, $retriever->getParameter('url'));
+        $this->assertEquals(sprintf('Visit %s!', $expectedUrl), $retriever->getParameter('url_concatenated_with_text'));
+    }
+
+    public function testExceptionIsThrownIfUnsetDynamicParameterWithoutDefaultValueIsRetrievedFromRetriever()
+    {
+        $container = new ContainerBuilder();
+        $container->setParameter('some_parameter', '%env(SOME_ENV_VAR)%');
+
+        $dynamicParametersBundle = new IncenteevDynamicParametersBundle();
+        $container->registerExtension($dynamicParametersBundle->getContainerExtension());
+        $dynamicParametersBundle->build($container);
+
+        $container->compile();
+
+        $this->setExpectedException('Symfony\Component\DependencyInjection\Exception\ParameterNotFoundException');
+
+        $container->get('incenteev_dynamic_parameters.retriever')->getParameter('some_parameter');
+    }
+
+    public function testExceptionIsThrownIfUnknownParameterIsRetrievedFromRetriever()
+    {
+        $container = new ContainerBuilder();
+
+        $dynamicParametersBundle = new IncenteevDynamicParametersBundle();
+        $container->registerExtension($dynamicParametersBundle->getContainerExtension());
+        $dynamicParametersBundle->build($container);
+
+        $container->compile();
+
+        $this->setExpectedException('Symfony\Component\DependencyInjection\Exception\ParameterNotFoundException');
+
+        $container->get('incenteev_dynamic_parameters.retriever')->getParameter('unknown_parameter');
+    }
+
+    /**
      * @param string $name
      * @param string $value
      * @return void

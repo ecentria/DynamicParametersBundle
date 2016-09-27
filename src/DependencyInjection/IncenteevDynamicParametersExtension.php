@@ -66,6 +66,10 @@ class IncenteevDynamicParametersExtension extends ConfigurableExtension implemen
             $envVarName = strtoupper(substr($newDynamicParam, 4, -1));
             $container->prependExtensionConfig($this->getAlias(), array('parameters' => array($newDynamicParam => $envVarName)));
         }
+
+        // make sure extension is always loaded
+        // extensions without config are not loaded in \Symfony\Component\DependencyInjection\Compiler\MergeExtensionConfigurationPass
+        $container->prependExtensionConfig($this->getAlias(), array('parameters' => array()));
     }
 
     protected function loadInternal(array $config, ContainerBuilder $container)
@@ -84,6 +88,12 @@ class IncenteevDynamicParametersExtension extends ConfigurableExtension implemen
         }
 
         $container->setParameter('incenteev_dynamic_parameters.parameters', $parameters);
+
+        // all parameters are injection into ParametersRetriever
+        // dynamic parameters are resolved the same way as in other service definitions
+        // as a result ParametersRetriever receives array of resolved parameters including dynamic parameters
+        // and doesn't need extra logic for retrieving parameters - just return parameter by it's name from array of resolved parameters
+        $container->setParameter('incenteev_dynamic_parameters.all_parameters', $container->getParameterBag()->all());
     }
 
     private function loadHandlerEnvMap($composerFile)
