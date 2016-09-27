@@ -8,6 +8,7 @@
         <service id="incenteev_dynamic_parameters.retriever" class="Incenteev\DynamicParametersBundle\ParameterRetriever">
             <argument type="service" id="service_container" />
             <argument>%incenteev_dynamic_parameters.parameters%</argument>
+            <argument>%incenteev_dynamic_parameters.all_parameters%</argument>
         </service>
     </services>
 </container>
