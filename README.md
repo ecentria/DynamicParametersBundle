@@ -84,6 +84,29 @@ The bundle takes care of service arguments, but changing the behavior of ``$cont
 $this->get('incenteev_dynamic_parameters.retriever')->get('database_host');
 ```
 
+### Default values for dynamic parameters
+There are two options
+
+#### (Recommended) Option 1:  Using ``.env`` file (see [vlucas/phpdotenv](https://github.com/vlucas/phpdotenv))
+```bash
+# .env file in project root
+DATABASE_HOST="localhost"
+```
+This option is forward compatible with Symfony 3.2.
+
+#### Option 2: Using ``%default_env()%`` parameters
+```yaml
+parameters:
+    database_host: %env(DATABASE_HOST)%
+    default_env(DATABASE_HOST): localhost
+```
+This option is **not** forward compatible with Symfony 3.2, where default values are defined as follows:
+```yaml
+parameters:
+    database_host: %env(DATABASE_HOST)%
+    env(DATABASE_HOST): localhost # doesn't work before Symfony 3.2
+```
+
 ## Limitations
 
 - Getting a parameter from the container directly at runtime will not use the environment variable
