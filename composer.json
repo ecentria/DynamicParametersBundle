@@ -1,13 +1,17 @@
 {
-    "name": "incenteev/dynamic-parameters-bundle",
+    "name": "ecentria/dynamic-parameters-bundle",
     "description": "Runtime retrieval of parameters from environment variables for Symfony",
     "keywords": ["symfony parameters", "environment variable"],
-    "homepage": "https://github.com/Incenteev/DynamicParametersBundle",
+    "homepage": "https://github.com/ecentria/DynamicParametersBundle",
     "license": "MIT",
     "authors": [
         {
             "name": "Christophe Coevoet",
             "email": "stof@notk.org"
+        },
+        {
+            "name": "Roman Shumkov",
+            "email": "roman.shumkov@intexsys.lv"
         }
     ],
     "require": {
@@ -27,5 +31,8 @@
         "branch-alias": {
             "dev-master": "1.0.x-dev"
         }
+    },
+    "conflict": {
+        "incenteev/dynamic-parameters-bundle": "*"
     }
 }
