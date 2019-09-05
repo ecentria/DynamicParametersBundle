@@ -5,7 +5,7 @@ namespace Incenteev\DynamicParametersBundle\Tests\DependencyInjection;
 use Incenteev\DynamicParametersBundle\DependencyInjection\Configuration;
 use Symfony\Component\Config\Definition\Processor;
 
-class ConfigurationTest extends \PHPUnit_Framework_TestCase
+class ConfigurationTest extends \Incenteev\DynamicParametersBundle\Tests\TestCase
 {
     public function testValidConfiguration()
     {

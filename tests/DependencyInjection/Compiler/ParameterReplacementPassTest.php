@@ -6,7 +6,7 @@ use Incenteev\DynamicParametersBundle\DependencyInjection\Compiler\ParameterRepl
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Parameter;
 
-class ParameterReplacementPassTest extends \PHPUnit_Framework_TestCase
+class ParameterReplacementPassTest extends \Incenteev\DynamicParametersBundle\Tests\TestCase
 {
     public function testReplaceParameters()
     {

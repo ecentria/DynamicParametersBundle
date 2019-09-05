@@ -4,11 +4,13 @@ namespace Incenteev\DynamicParametersBundle\Tests;
 
 use Incenteev\DynamicParametersBundle\ParameterRetriever;
 
-class ParameterRetrieverTest extends \PHPUnit_Framework_TestCase
+class ParameterRetrieverTest extends \Incenteev\DynamicParametersBundle\Tests\TestCase
 {
     public function testMissingEnvVar()
     {
-        $container = $this->getMock('Symfony\Component\DependencyInjection\ContainerInterface');
+        $container = $this->getMockBuilder('Symfony\Component\DependencyInjection\ContainerInterface')
+            ->getMockForAbstractClass();
+
         $container->expects($this->once())
             ->method('getParameter')
             ->with('foo')
@@ -23,7 +25,9 @@ class ParameterRetrieverTest extends \PHPUnit_Framework_TestCase
 
     public function testUnknownParameter()
     {
-        $container = $this->getMock('Symfony\Component\DependencyInjection\ContainerInterface');
+        $container = $this->getMockBuilder('Symfony\Component\DependencyInjection\ContainerInterface')
+            ->getMockForAbstractClass();
+
         $container->expects($this->once())
             ->method('getParameter')
             ->with('foo')
@@ -36,7 +40,9 @@ class ParameterRetrieverTest extends \PHPUnit_Framework_TestCase
 
     public function testEnvParameter()
     {
-        $container = $this->getMock('Symfony\Component\DependencyInjection\ContainerInterface');
+        $container = $this->getMockBuilder('Symfony\Component\DependencyInjection\ContainerInterface')
+            ->getMockForAbstractClass();
+
         $container->expects($this->never())
             ->method('getParameter');
 
@@ -49,7 +55,9 @@ class ParameterRetrieverTest extends \PHPUnit_Framework_TestCase
 
     public function testYamlParameter()
     {
-        $container = $this->getMock('Symfony\Component\DependencyInjection\ContainerInterface');
+        $container = $this->getMockBuilder('Symfony\Component\DependencyInjection\ContainerInterface')
+            ->getMockForAbstractClass();
+
         $container->expects($this->never())
             ->method('getParameter');
 

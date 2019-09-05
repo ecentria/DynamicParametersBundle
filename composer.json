@@ -1,7 +1,10 @@
 {
     "name": "ecentria/dynamic-parameters-bundle",
     "description": "Runtime retrieval of parameters from environment variables for Symfony",
-    "keywords": ["symfony parameters", "environment variable"],
+    "keywords": [
+        "symfony parameters",
+        "environment variable"
+    ],
     "homepage": "https://github.com/ecentria/DynamicParametersBundle",
     "license": "MIT",
     "authors": [
@@ -15,17 +18,24 @@
         }
     ],
     "require": {
-        "symfony/dependency-injection": "^2.6.2@dev",
-        "symfony/expression-language": "~2.6",
-        "symfony/http-kernel": "~2.3",
-        "symfony/config": "~2.3",
-        "symfony/yaml": "~2.0"
+        "symfony/dependency-injection": "^2.7|^3.0",
+        "symfony/expression-language": "^2.7|^3.0",
+        "symfony/http-kernel": "^2.7|^3.0",
+        "symfony/config": "^2.7|^3.0",
+        "symfony/yaml": "^2.7|^3.0"
+    },
+    "require-dev": {
+        "symfony/phpunit-bridge": "^4.2"
     },
     "autoload": {
-        "psr-4": { "Incenteev\\DynamicParametersBundle\\": "src" }
+        "psr-4": {
+            "Incenteev\\DynamicParametersBundle\\": "src"
+        }
     },
     "autoload-dev": {
-        "psr-4": { "Incenteev\\DynamicParametersBundle\\Tests\\": "tests" }
+        "psr-4": {
+            "Incenteev\\DynamicParametersBundle\\Tests\\": "tests"
+        }
     },
     "extra": {
         "branch-alias": {
@@ -33,6 +43,12 @@
         }
     },
     "conflict": {
-        "incenteev/dynamic-parameters-bundle": "*"
+        "incenteev/dynamic-parameters-bundle": "*",
+        "symfony/symfony": ">=3.2",
+        "symfony/dependency-injection": ">=3.2",
+        "symfony/expression-language": ">=3.2",
+        "symfony/http-kernel": ">=3.2",
+        "symfony/config": ">=3.2",
+        "symfony/yaml": ">=3.2"
     }
 }

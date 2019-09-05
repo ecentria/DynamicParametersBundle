@@ -8,7 +8,7 @@ use Symfony\Component\DependencyInjection\Compiler\ResolveParameterPlaceHoldersP
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\DependencyInjection\ConfigurableExtension;
 
-class DependencyInjectionContainerIntegrationTest extends \PHPUnit_Framework_TestCase
+class DependencyInjectionContainerIntegrationTest extends \Incenteev\DynamicParametersBundle\Tests\TestCase
 {
     private $setEnvVars = array();
 
@@ -458,7 +458,11 @@ class DependencyInjectionContainerIntegrationTest extends \PHPUnit_Framework_Tes
 
         $container->compile();
 
-        $this->setExpectedException('Symfony\Component\DependencyInjection\Exception\ParameterNotFoundException');
+        if (\method_exists($this,'setExpectedException')) {
+            $this->setExpectedException('Symfony\Component\DependencyInjection\Exception\ParameterNotFoundException');
+        } else {
+            $this->expectException('Symfony\Component\DependencyInjection\Exception\ParameterNotFoundException');
+        }
 
         $container->get('fake_extension.some_service');
     }
@@ -546,7 +550,11 @@ class DependencyInjectionContainerIntegrationTest extends \PHPUnit_Framework_Tes
 
         $container->compile();
 
-        $this->setExpectedException('Symfony\Component\DependencyInjection\Exception\ParameterNotFoundException');
+        if (\method_exists($this,'setExpectedException')) {
+            $this->setExpectedException('Symfony\Component\DependencyInjection\Exception\ParameterNotFoundException');
+        } else {
+            $this->expectException('Symfony\Component\DependencyInjection\Exception\ParameterNotFoundException');
+        }
 
         $container->get('incenteev_dynamic_parameters.retriever')->getParameter('some_parameter');
     }
@@ -561,7 +569,11 @@ class DependencyInjectionContainerIntegrationTest extends \PHPUnit_Framework_Tes
 
         $container->compile();
 
-        $this->setExpectedException('Symfony\Component\DependencyInjection\Exception\ParameterNotFoundException');
+        if (\method_exists($this,'setExpectedException')) {
+            $this->setExpectedException('Symfony\Component\DependencyInjection\Exception\ParameterNotFoundException');
+        } else {
+            $this->expectException('Symfony\Component\DependencyInjection\Exception\ParameterNotFoundException');
+        }
 
         $container->get('incenteev_dynamic_parameters.retriever')->getParameter('unknown_parameter');
     }

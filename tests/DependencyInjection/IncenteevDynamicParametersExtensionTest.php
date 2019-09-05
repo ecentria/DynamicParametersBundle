@@ -5,7 +5,7 @@ namespace Incenteev\DynamicParametersBundle\Tests\DependencyInjection;
 use Incenteev\DynamicParametersBundle\DependencyInjection\IncenteevDynamicParametersExtension;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
-class IncenteevDynamicParametersExtensionTest extends \PHPUnit_Framework_TestCase
+class IncenteevDynamicParametersExtensionTest extends \Incenteev\DynamicParametersBundle\Tests\TestCase
 {
     public function testLoadEmptyConfig()
     {
